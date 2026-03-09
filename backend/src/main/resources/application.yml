@@ -1,1 +1,60 @@
-spring.application.name=backend
+server:
+  port: 10000
+  shutdown: graceful
+
+spring:
+  application:
+    name: app-dev
+
+  config:
+    import: optional:file:.env[.properties]
+
+  datasource:
+    url: jdbc:mysql://localhost:3307/dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: dev
+    password: dev
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: hikari-pool-dev
+      maximum-pool-size: 12
+      minimum-idle: 12
+      connection-timeout: 5000
+      max-lifetime: 1800000
+      idle-timeout: 600000
+      validation-timeout: 1000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        highlight_sql: true
+        jdbc.time_zone: Asia/Seoul
+        generate_statistics: false
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 300
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: 2s
+      timeout: 2s
+
+app:
+  jwt:
+    issuer: ${spring.application.name}
+    at-ttl-seconds: ${JWT_AT_TTL_SECONCDS}
+    rt-ttl-seconds: ${JWT_RT_TTL_SECONCDS}
+    secret: ${JWT_SECRET_KEY}
+    clock-skew-seconds: ${JWT_CLOCK_SKEW_SECONDS}                          # 1?? ?? ?? TTL
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    prometheus:
+      enabled: true
