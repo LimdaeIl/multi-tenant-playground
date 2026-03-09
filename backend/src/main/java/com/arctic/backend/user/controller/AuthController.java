@@ -12,25 +12,21 @@ import com.arctic.backend.user.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 @RestController
 public class AuthController {
-    private final AuthService authService;
 
+    private final AuthService authService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
+            @RequestHeader("X-Tenant-Code") String tenantCode,
             @RequestBody @Valid SignupRequest request
     ) {
-        SignupResponse response = authService.signup(request);
-
+        SignupResponse response = authService.signup(tenantCode, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -39,7 +35,6 @@ public class AuthController {
             @RequestBody @Valid SignInRequest request
     ) {
         SignInResponse response = authService.signIn(request);
-
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -60,6 +55,4 @@ public class AuthController {
         authService.logout(at, request.refreshToken());
         return ResponseEntity.noContent().build();
     }
-
-
 }

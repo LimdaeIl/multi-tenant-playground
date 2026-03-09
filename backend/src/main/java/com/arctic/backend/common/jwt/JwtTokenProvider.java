@@ -1,6 +1,5 @@
 package com.arctic.backend.common.jwt;
 
-
 import com.arctic.backend.user.domain.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -31,7 +30,6 @@ public class JwtTokenProvider {
     private static final String PREFIX_BEARER = "Bearer ";
     private static final String CLAIM_UID = "uid";
     private static final String CLAIM_ROLE = "role";
-
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
@@ -92,7 +90,6 @@ public class JwtTokenProvider {
         return Math.max(claims.getExpiration().getTime() - System.currentTimeMillis(), 0);
     }
 
-
     public boolean isValid(String token) {
         try {
             parseClaims(token);
@@ -149,6 +146,4 @@ public class JwtTokenProvider {
         }
         return trimmed;
     }
-
-
 }

@@ -1,11 +1,15 @@
 package com.arctic.backend.user.service;
 
-
 import static com.arctic.backend.user.exception.UserErrorCode.USER_NOT_FOUND;
 
 import com.arctic.backend.common.jwt.JwtErrorCode;
 import com.arctic.backend.common.jwt.JwtTokenProvider;
 import com.arctic.backend.common.jwt.TokenException;
+import com.arctic.backend.tenant.domain.MembershipRole;
+import com.arctic.backend.tenant.domain.Tenant;
+import com.arctic.backend.tenant.domain.UserTenantMembership;
+import com.arctic.backend.tenant.repository.TenantRepository;
+import com.arctic.backend.tenant.repository.UserTenantMembershipRepository;
 import com.arctic.backend.user.domain.User;
 import com.arctic.backend.user.dto.request.SignInRequest;
 import com.arctic.backend.user.dto.request.SignupRequest;
@@ -16,6 +20,7 @@ import com.arctic.backend.user.exception.AuthErrorCode;
 import com.arctic.backend.user.exception.AuthException;
 import com.arctic.backend.user.repository.UserRepository;
 import com.arctic.backend.user.repository.UserTokenRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,15 +32,18 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserTokenRepository userTokenRepository;
+    private final UserTenantMembershipRepository membershipRepository;
+    private final TenantRepository tenantRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public SignupResponse signup(SignupRequest request) {
-
+    public SignupResponse signup(String tenantCode, SignupRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new AuthException(AuthErrorCode.EMAIL_EXISTS);
         }
+
+        Tenant tenant = getActiveTenant(tenantCode);
 
         User user = User.create(
                 request.email(),
@@ -46,14 +54,25 @@ public class AuthService {
 
         userRepository.save(user);
 
+        UserTenantMembership membership = UserTenantMembership.create(
+                user,
+                tenant,
+                MembershipRole.OWNER,
+                true
+        );
+
+        membershipRepository.save(membership);
+
         return SignupResponse.from(user);
     }
 
     @Transactional
     public SignInResponse signIn(SignInRequest request) {
         User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
-                .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND_BY_EMAIL,
-                        request.email()));
+                .orElseThrow(() -> new AuthException(
+                        AuthErrorCode.USER_NOT_FOUND_BY_EMAIL,
+                        request.email()
+                ));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new AuthException(AuthErrorCode.USER_PASSWORD_INCORRECT);
@@ -63,15 +82,19 @@ public class AuthService {
         String rt = jwtTokenProvider.generateRt(user.getId(), user.getEmail(), user.getRole());
 
         long refreshTtlMs = jwtTokenProvider.getRtTtlSeconds(rt);
-
         userTokenRepository.saveRefreshToken(user.getId(), rt, refreshTtlMs);
 
-        return SignInResponse.of(user, at, rt);
+        List<UserTenantMembership> memberships =
+                membershipRepository.findAllByUser_IdAndStatus(
+                        user.getId(),
+                        com.arctic.backend.tenant.domain.MembershipStatus.ACTIVE
+                );
+
+        return SignInResponse.of(user, at, rt, memberships);
     }
 
     @Transactional
     public TokenReissueResponse reissue(String at, String rt) {
-
         Long userId = jwtTokenProvider.getUserId(rt);
 
         if (userTokenRepository.isRtBlacklisted(rt)) {
@@ -101,11 +124,10 @@ public class AuthService {
             }
         }
 
-        String newAt = jwtTokenProvider.generateAt(userId, user.getEmail(), user.getRole());
-        String newRt = jwtTokenProvider.generateRt(userId, user.getEmail(), user.getRole());
+        String newAt = jwtTokenProvider.generateAt(user.getId(), user.getEmail(), user.getRole());
+        String newRt = jwtTokenProvider.generateRt(user.getId(), user.getEmail(), user.getRole());
         long newRtTtl = jwtTokenProvider.getRtTtlSeconds(newRt);
 
-        // 새 RT를 Redis에 저장 (사용 가능한 RT는 항상 '한 개'만 유지)
         userTokenRepository.saveRefreshToken(userId, newRt, newRtTtl);
 
         return TokenReissueResponse.of(user.getId(), newAt, newRt);
@@ -147,6 +169,28 @@ public class AuthService {
         }
 
         userTokenRepository.deleteRt(userIdByRt);
+    }
 
+    private Tenant getActiveTenant(String tenantCode) {
+        String normalizedTenantCode = normalizeTenantCode(tenantCode);
+
+        Tenant tenant = tenantRepository.findByCode(normalizedTenantCode)
+                .orElseThrow(() -> new AuthException(
+                        AuthErrorCode.TENANT_NOT_FOUND,
+                        normalizedTenantCode
+                ));
+
+        if (!tenant.isActive()) {
+            throw new AuthException(
+                    AuthErrorCode.TENANT_INACTIVE,
+                    normalizedTenantCode
+            );
+        }
+
+        return tenant;
+    }
+
+    private String normalizeTenantCode(String tenantCode) {
+        return tenantCode.trim().toLowerCase();
     }
 }

@@ -2,7 +2,6 @@ package com.arctic.backend.user.domain;
 
 import com.arctic.backend.common.audit.BaseEntity;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,7 +15,12 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "v1_users")
+@Table(name = "v1_users", uniqueConstraints = {
+        @jakarta.persistence.UniqueConstraint(
+                name = "uk_user_email",
+                columnNames = {"email"}
+        )
+})
 @Entity
 public class User extends BaseEntity {
 
@@ -33,7 +37,7 @@ public class User extends BaseEntity {
     @Column(name = "nickname", nullable = false, length = 20)
     private String nickname;
 
-    @Column(name = "phone", length = 11) // nullable true
+    @Column(name = "phone", length = 11)
     private String phone;
 
     @Enumerated(EnumType.STRING)
@@ -51,7 +55,6 @@ public class User extends BaseEntity {
         this.role = UserRole.USER;
     }
 
-
     public static User create(String email, String password, String nickname, String phone) {
         return new User(email, password, nickname, phone);
     }
@@ -67,7 +70,4 @@ public class User extends BaseEntity {
     public void updateNickname(String nickname) {
         this.nickname = nickname;
     }
-
 }
-
-

@@ -4,26 +4,21 @@ import com.arctic.backend.tenant.domain.UserTenantMembership;
 import com.arctic.backend.user.domain.User;
 import java.util.List;
 
-public record SignInResponse(
-        Long userId,
+public record GetUserResponse(
+        Long id,
         String email,
-        String nickName,
-        String accessToken,
-        String refreshToken,
+        String nickname,
+        String phone,
+        String role,
         List<UserMembershipResponse> memberships
 ) {
-    public static SignInResponse of(
-            User user,
-            String accessToken,
-            String refreshToken,
-            List<UserTenantMembership> memberships
-    ) {
-        return new SignInResponse(
+    public static GetUserResponse of(User user, List<UserTenantMembership> memberships) {
+        return new GetUserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
-                accessToken,
-                refreshToken,
+                user.getPhone(),
+                user.getRole().name(),
                 memberships.stream()
                         .map(UserMembershipResponse::from)
                         .toList()
