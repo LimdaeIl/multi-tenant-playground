@@ -5,14 +5,14 @@ import static com.arctic.backend.user.exception.UserErrorCode.USER_NOT_FOUND;
 import com.arctic.backend.common.jwt.JwtErrorCode;
 import com.arctic.backend.common.jwt.JwtTokenProvider;
 import com.arctic.backend.common.jwt.TokenException;
-import com.arctic.backend.tenant.domain.MembershipRole;
-import com.arctic.backend.tenant.domain.Tenant;
+import com.arctic.backend.tenant.domain.TenantInvitation;
 import com.arctic.backend.tenant.domain.UserTenantMembership;
-import com.arctic.backend.tenant.repository.TenantRepository;
 import com.arctic.backend.tenant.repository.UserTenantMembershipRepository;
+import com.arctic.backend.tenant.service.TenantInvitationService;
 import com.arctic.backend.user.domain.User;
 import com.arctic.backend.user.dto.request.SignInRequest;
 import com.arctic.backend.user.dto.request.SignupRequest;
+import com.arctic.backend.user.dto.request.SignupWithInvitationRequest;
 import com.arctic.backend.user.dto.response.SignInResponse;
 import com.arctic.backend.user.dto.response.SignupResponse;
 import com.arctic.backend.user.dto.response.TokenReissueResponse;
@@ -33,20 +33,36 @@ public class AuthService {
     private final UserRepository userRepository;
     private final UserTokenRepository userTokenRepository;
     private final UserTenantMembershipRepository membershipRepository;
-    private final TenantRepository tenantRepository;
+    private final TenantInvitationService tenantInvitationService;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public SignupResponse signup(String tenantCode, SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new AuthException(AuthErrorCode.EMAIL_EXISTS);
-        }
-
-        Tenant tenant = getActiveTenant(tenantCode);
+    public SignupResponse signup(SignupRequest request) {
+        validateEmailDuplication(request.email());
 
         User user = User.create(
-                request.email(),
+                normalizeEmail(request.email()),
+                passwordEncoder.encode(request.password()),
+                request.nickname(),
+                request.phone()
+        );
+
+        userRepository.save(user);
+        return SignupResponse.from(user);
+    }
+
+    @Transactional
+    public SignupResponse signupWithInvitation(SignupWithInvitationRequest request) {
+        validateEmailDuplication(request.email());
+
+        TenantInvitation invitation = tenantInvitationService.getValidInvitationForSignup(
+                request.inviteToken(),
+                request.email()
+        );
+
+        User user = User.create(
+                normalizeEmail(request.email()),
                 passwordEncoder.encode(request.password()),
                 request.nickname(),
                 request.phone()
@@ -56,19 +72,27 @@ public class AuthService {
 
         UserTenantMembership membership = UserTenantMembership.create(
                 user,
-                tenant,
-                MembershipRole.OWNER,
-                true
+                invitation.getTenant(),
+                invitation.getRole()
         );
 
         membershipRepository.save(membership);
+
+        if (!user.hasPrimaryTenant()) {
+            user.changePrimaryTenant(invitation.getTenant().getId());
+        }
+
+        tenantInvitationService.completeInvitationAcceptance(
+                invitation,
+                request.inviteToken()
+        );
 
         return SignupResponse.from(user);
     }
 
     @Transactional
     public SignInResponse signIn(SignInRequest request) {
-        User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(normalizeEmail(request.email()))
                 .orElseThrow(() -> new AuthException(
                         AuthErrorCode.USER_NOT_FOUND_BY_EMAIL,
                         request.email()
@@ -81,8 +105,8 @@ public class AuthService {
         String at = jwtTokenProvider.generateAt(user.getId(), user.getEmail(), user.getRole());
         String rt = jwtTokenProvider.generateRt(user.getId(), user.getEmail(), user.getRole());
 
-        long refreshTtlMs = jwtTokenProvider.getRtTtlSeconds(rt);
-        userTokenRepository.saveRefreshToken(user.getId(), rt, refreshTtlMs);
+        long refreshTtlMillis = jwtTokenProvider.getRtTtlMillis(rt);
+        userTokenRepository.saveRefreshToken(user.getId(), rt, refreshTtlMillis);
 
         List<UserTenantMembership> memberships =
                 membershipRepository.findAllByUser_IdAndStatus(
@@ -112,23 +136,23 @@ public class AuthService {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new AuthException(USER_NOT_FOUND));
 
-        long rtTtl = jwtTokenProvider.getRtTtlSeconds(rt);
-        if (rtTtl > 0) {
-            userTokenRepository.blacklistRt(rt, rtTtl);
+        long rtTtlMillis = jwtTokenProvider.getRtTtlMillis(rt);
+        if (rtTtlMillis > 0) {
+            userTokenRepository.blacklistRt(rt, rtTtlMillis);
         }
 
         if (at != null && !at.isBlank()) {
-            long atTtl = jwtTokenProvider.getAtTtlSeconds(at);
-            if (atTtl > 0) {
-                userTokenRepository.blacklistAt(at, atTtl);
+            long atTtlMillis = jwtTokenProvider.getAtTtlMillis(at);
+            if (atTtlMillis > 0) {
+                userTokenRepository.blacklistAt(at, atTtlMillis);
             }
         }
 
         String newAt = jwtTokenProvider.generateAt(user.getId(), user.getEmail(), user.getRole());
         String newRt = jwtTokenProvider.generateRt(user.getId(), user.getEmail(), user.getRole());
-        long newRtTtl = jwtTokenProvider.getRtTtlSeconds(newRt);
+        long newRtTtlMillis = jwtTokenProvider.getRtTtlMillis(newRt);
 
-        userTokenRepository.saveRefreshToken(userId, newRt, newRtTtl);
+        userTokenRepository.saveRefreshToken(userId, newRt, newRtTtlMillis);
 
         return TokenReissueResponse.of(user.getId(), newAt, newRt);
     }
@@ -158,39 +182,26 @@ public class AuthService {
             throw new TokenException(JwtErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        long rtTtl = jwtTokenProvider.getRtTtlSeconds(rt);
-        if (rtTtl > 0) {
-            userTokenRepository.blacklistRt(rt, rtTtl);
+        long rtTtlMillis = jwtTokenProvider.getRtTtlMillis(rt);
+        if (rtTtlMillis > 0) {
+            userTokenRepository.blacklistRt(rt, rtTtlMillis);
         }
 
-        long atTtl = jwtTokenProvider.getAtTtlSeconds(at);
-        if (atTtl > 0) {
-            userTokenRepository.blacklistAt(at, atTtl);
+        long atTtlMillis = jwtTokenProvider.getAtTtlMillis(at);
+        if (atTtlMillis > 0) {
+            userTokenRepository.blacklistAt(at, atTtlMillis);
         }
 
         userTokenRepository.deleteRt(userIdByRt);
     }
 
-    private Tenant getActiveTenant(String tenantCode) {
-        String normalizedTenantCode = normalizeTenantCode(tenantCode);
-
-        Tenant tenant = tenantRepository.findByCode(normalizedTenantCode)
-                .orElseThrow(() -> new AuthException(
-                        AuthErrorCode.TENANT_NOT_FOUND,
-                        normalizedTenantCode
-                ));
-
-        if (!tenant.isActive()) {
-            throw new AuthException(
-                    AuthErrorCode.TENANT_INACTIVE,
-                    normalizedTenantCode
-            );
+    private void validateEmailDuplication(String email) {
+        if (userRepository.existsByEmailAndDeletedAtIsNull(normalizeEmail(email))) {
+            throw new AuthException(AuthErrorCode.EMAIL_EXISTS);
         }
-
-        return tenant;
     }
 
-    private String normalizeTenantCode(String tenantCode) {
-        return tenantCode.trim().toLowerCase();
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
     }
 }

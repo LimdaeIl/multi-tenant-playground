@@ -4,6 +4,7 @@ import com.arctic.backend.common.response.ApiResponse;
 import com.arctic.backend.user.dto.request.LogoutRequest;
 import com.arctic.backend.user.dto.request.SignInRequest;
 import com.arctic.backend.user.dto.request.SignupRequest;
+import com.arctic.backend.user.dto.request.SignupWithInvitationRequest;
 import com.arctic.backend.user.dto.request.TokenReissueRequest;
 import com.arctic.backend.user.dto.response.SignInResponse;
 import com.arctic.backend.user.dto.response.SignupResponse;
@@ -23,10 +24,17 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<SignupResponse>> signup(
-            @RequestHeader("X-Tenant-Code") String tenantCode,
             @RequestBody @Valid SignupRequest request
     ) {
-        SignupResponse response = authService.signup(tenantCode, request);
+        SignupResponse response = authService.signup(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/signup/invitation")
+    public ResponseEntity<ApiResponse<SignupResponse>> signupWithInvitation(
+            @RequestBody @Valid SignupWithInvitationRequest request
+    ) {
+        SignupResponse response = authService.signupWithInvitation(request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

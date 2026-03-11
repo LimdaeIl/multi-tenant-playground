@@ -80,12 +80,12 @@ public class JwtTokenProvider {
         return UserRole.valueOf(role);
     }
 
-    public long getRtTtlSeconds(String rt) {
+    public long getRtTtlMillis(String rt) {
         Claims claims = parseClaims(rt);
         return Math.max(claims.getExpiration().getTime() - System.currentTimeMillis(), 0);
     }
 
-    public long getAtTtlSeconds(String at) {
+    public long getAtTtlMillis(String at) {
         Claims claims = parseClaims(at);
         return Math.max(claims.getExpiration().getTime() - System.currentTimeMillis(), 0);
     }

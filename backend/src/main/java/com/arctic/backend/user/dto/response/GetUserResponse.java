@@ -10,6 +10,7 @@ public record GetUserResponse(
         String nickname,
         String phone,
         String role,
+        Long primaryTenantId,
         List<UserMembershipResponse> memberships
 ) {
     public static GetUserResponse of(User user, List<UserTenantMembership> memberships) {
@@ -19,8 +20,12 @@ public record GetUserResponse(
                 user.getNickname(),
                 user.getPhone(),
                 user.getRole().name(),
+                user.getPrimaryTenantId(),
                 memberships.stream()
-                        .map(UserMembershipResponse::from)
+                        .map(membership -> UserMembershipResponse.from(
+                                membership,
+                                user.getPrimaryTenantId()
+                        ))
                         .toList()
         );
     }

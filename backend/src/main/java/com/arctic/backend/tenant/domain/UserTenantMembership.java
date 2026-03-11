@@ -52,40 +52,37 @@ public class UserTenantMembership extends BaseEntity {
     @Column(name = "membership_status", nullable = false, length = 30)
     private MembershipStatus status;
 
-    @Column(name = "is_primary", nullable = false)
-    private boolean primaryTenant;
-
     private UserTenantMembership(
             User user,
             Tenant tenant,
             MembershipRole role,
-            MembershipStatus status,
-            boolean primaryTenant
+            MembershipStatus status
     ) {
         this.user = user;
         this.tenant = tenant;
         this.role = role;
         this.status = status;
-        this.primaryTenant = primaryTenant;
     }
 
     public static UserTenantMembership create(
             User user,
             Tenant tenant,
-            MembershipRole role,
-            boolean primaryTenant
+            MembershipRole role
     ) {
         return new UserTenantMembership(
                 user,
                 tenant,
                 role,
-                MembershipStatus.ACTIVE,
-                primaryTenant
+                MembershipStatus.ACTIVE
         );
     }
 
     public boolean isActive() {
         return this.status == MembershipStatus.ACTIVE;
+    }
+
+    public boolean isOwnerOrAdmin() {
+        return this.role == MembershipRole.OWNER || this.role == MembershipRole.ADMIN;
     }
 
     public void changeRole(MembershipRole role) {
@@ -100,11 +97,11 @@ public class UserTenantMembership extends BaseEntity {
         this.status = MembershipStatus.SUSPENDED;
     }
 
-    public void markPrimary() {
-        this.primaryTenant = true;
+    public void leave() {
+        this.status = MembershipStatus.LEFT;
     }
 
-    public void unmarkPrimary() {
-        this.primaryTenant = false;
+    public void invite() {
+        this.status = MembershipStatus.INVITED;
     }
 }

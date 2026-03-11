@@ -47,6 +47,9 @@ public class User extends BaseEntity {
     @Column(name = "profile_image", length = 300)
     private String profileImage;
 
+    @Column(name = "primary_tenant_id")
+    private Long primaryTenantId;
+
     private User(String email, String password, String nickname, String phone) {
         this.email = email;
         this.password = password;
@@ -60,7 +63,7 @@ public class User extends BaseEntity {
     }
 
     public void updateEmail(String email) {
-        this.email = email;
+        this.email = email.trim().toLowerCase();
     }
 
     public void updateProfileImage(String profileImage) {
@@ -68,6 +71,14 @@ public class User extends BaseEntity {
     }
 
     public void updateNickname(String nickname) {
-        this.nickname = nickname;
+        this.nickname = nickname.trim();
+    }
+
+    public void changePrimaryTenant(Long tenantId) {
+        this.primaryTenantId = tenantId;
+    }
+
+    public boolean hasPrimaryTenant() {
+        return this.primaryTenantId != null;
     }
 }

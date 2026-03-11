@@ -27,7 +27,16 @@ public enum AuthErrorCode implements ErrorCode {
     PHONE_AUTH_NOT_VERIFIED(HttpStatus.UNAUTHORIZED, "인증/인가: 인증되지 않은 휴대전화번호입니다."),
 
     SOCIAL_EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "소셜 로그인: 동일 이메일로 이미 가입된 계정이 있습니다."),
-    SOCIAL_EXCHANGE_CODE_INVALID(HttpStatus.BAD_REQUEST, "소셜 로그인: 교환 코드가 만료되었거나 유효하지 않습니다.");
+    SOCIAL_EXCHANGE_CODE_INVALID(HttpStatus.BAD_REQUEST, "소셜 로그인: 교환 코드가 만료되었거나 유효하지 않습니다."),
+    TENANT_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 테넌트입니다. tenantCode: %s"),
+    TENANT_MEMBERSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 테넌트에 가입된 사용자입니다. userId: %s, tenantCode: %s"),
+    TENANT_PRIMARY_NOT_FOUND(HttpStatus.NOT_FOUND, "기본 테넌트를 찾을 수 없습니다."),
+    TENANT_MEMBERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "테넌트 멤버십을 찾을 수 없습니다. tenantCode: %s"),
+    TENANT_MEMBERSHIP_INACTIVE(HttpStatus.BAD_REQUEST, "활성 상태의 테넌트 멤버십이 아닙니다. tenantCode: %s")
+
+
+    ;
+
 
     private final HttpStatus status;
     private final String message;

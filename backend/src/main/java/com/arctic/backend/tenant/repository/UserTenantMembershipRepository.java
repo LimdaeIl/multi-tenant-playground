@@ -20,9 +20,19 @@ public interface UserTenantMembershipRepository extends JpaRepository<UserTenant
             MembershipStatus status
     );
 
+    Optional<UserTenantMembership> findByUser_IdAndTenant_IdAndStatus(
+            Long userId,
+            Long tenantId,
+            MembershipStatus status
+    );
+
     boolean existsByUser_IdAndTenant_CodeAndStatus(
             Long userId,
             String tenantCode,
             MembershipStatus status
     );
+
+    boolean existsByUser_IdAndTenant_Code(Long userId, String tenantCode);
+
+    boolean existsByUser_Id(Long userId);
 }

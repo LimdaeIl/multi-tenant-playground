@@ -48,7 +48,7 @@ public class Tenant extends BaseEntity {
     }
 
     public void updateName(String name) {
-        this.name = name;
+        this.name = name.trim();
     }
 
     public void activate() {

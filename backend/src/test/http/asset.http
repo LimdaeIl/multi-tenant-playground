@@ -1,0 +1,48 @@
+### 1. 회원가입 성공
+POST http://localhost:10000/api/v1/auth/signup
+Content-Type: application/json
+X-Tenant-Code: alpha
+
+{
+  "email": "testuser1@example.com",
+  "password": "Test1234!",
+  "nickname": "테스트유저1",
+  "phone": "01012345678"
+}
+
+### 2. 로그인 성공
+POST http://localhost:10000/api/v1/auth/sign-in
+Content-Type: application/json
+
+{
+  "email": "testuser1@example.com",
+  "password": "Test1234!"
+}
+
+> {%
+  client.global.set("accessToken", response.body.data.accessToken);
+  client.global.set("refreshToken", response.body.data.refreshToken);
+%}
+
+### asset 생성
+POST http://localhost:10000/api/v1/assets
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+X-Tenant-Code: alpha
+
+{
+  "code": "sensor-001",
+  "name": "센서 1호기",
+  "externalKey": "ext-sensor-001",
+  "description": "alpha tenant의 첫 번째 센서"
+}
+
+### asset 목록 조회
+GET http://localhost:10000/api/v1/assets
+Authorization: Bearer {{accessToken}}
+X-Tenant-Code: alpha
+
+### asset 단건 조회
+GET http://localhost:10000/api/v1/assets/1
+Authorization: Bearer {{accessToken}}
+X-Tenant-Code: alpha

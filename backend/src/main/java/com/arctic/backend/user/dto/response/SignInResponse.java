@@ -8,6 +8,7 @@ public record SignInResponse(
         Long userId,
         String email,
         String nickName,
+        Long primaryTenantId,
         String accessToken,
         String refreshToken,
         List<UserMembershipResponse> memberships
@@ -22,10 +23,14 @@ public record SignInResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
+                user.getPrimaryTenantId(),
                 accessToken,
                 refreshToken,
                 memberships.stream()
-                        .map(UserMembershipResponse::from)
+                        .map(membership -> UserMembershipResponse.from(
+                                membership,
+                                user.getPrimaryTenantId()
+                        ))
                         .toList()
         );
     }

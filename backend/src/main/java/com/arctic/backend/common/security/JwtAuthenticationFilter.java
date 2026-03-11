@@ -2,6 +2,7 @@ package com.arctic.backend.common.security;
 
 import com.arctic.backend.common.jwt.JwtTokenProvider;
 import com.arctic.backend.user.domain.UserRole;
+import com.arctic.backend.user.repository.UserTokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserTokenRepository userTokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -29,27 +31,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
+        if (authHeader != null && !authHeader.isBlank()) {
+            try {
+                if (jwtTokenProvider.isValid(authHeader)) {
+                    if (userTokenRepository.isAtBlacklisted(authHeader)) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
-            if (jwtTokenProvider.isValid(token)) {
-                Long userId = jwtTokenProvider.getUserId(token);
-                String email = jwtTokenProvider.getEmail(token);
-                UserRole role = jwtTokenProvider.getRole(token);
+                    Long userId = jwtTokenProvider.getUserId(authHeader);
+                    String email = jwtTokenProvider.getEmail(authHeader);
+                    UserRole role = jwtTokenProvider.getRole(authHeader);
 
-                CustomUserDetails principal =
-                        new CustomUserDetails(userId, email, role);
+                    CustomUserDetails principal =
+                            new CustomUserDetails(userId, email, role);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                principal,
-                                null,
-                                principal.getAuthorities()
-                        );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    principal,
+                                    null,
+                                    principal.getAuthorities()
+                            );
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } catch (Exception e) {
+                log.debug("JWT authentication skipped: {}", e.getMessage());
             }
         }
 
