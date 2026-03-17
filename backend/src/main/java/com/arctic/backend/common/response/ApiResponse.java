@@ -6,11 +6,9 @@ public record ApiResponse<T>(
         T data
 ) {
 
-
     public static <T> ApiResponse<T> success(T data) {
         return new ApiResponse<>(200, true, data);
     }
-
 
     public static <T> ApiResponse<T> success(int status, T data) {
         return new ApiResponse<>(status, true, data);
@@ -19,9 +17,4 @@ public record ApiResponse<T>(
     public static <T> ApiResponse<T> success(int status, boolean isSuccess, T data) {
         return new ApiResponse<>(status, isSuccess, data);
     }
-
-    public static <T> ApiResponse<T> success(int status, boolean isSuccess) {
-        return new ApiResponse<>(status, true, null);
-    }
-
 }

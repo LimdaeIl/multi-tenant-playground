@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/admin/tenants")
 @RestController
-public class TenantAdminController {
+public class TenantAdminController implements TenantAdminControllerDocs {
 
     private final TenantAdminService tenantAdminService;
 

@@ -45,10 +45,10 @@ spring:
 app:
   jwt:
     issuer: ${spring.application.name}
-    at-ttl-seconds: ${JWT_AT_TTL_SECONCDS}
-    rt-ttl-seconds: ${JWT_RT_TTL_SECONCDS}
+    at-ttl-seconds: ${JWT_AT_TTL_SECONDS}
+    rt-ttl-seconds: ${JWT_RT_TTL_SECONDS}
     secret: ${JWT_SECRET_KEY}
-    clock-skew-seconds: ${JWT_CLOCK_SKEW_SECONDS}                          # 1?? ?? ?? TTL
+    clock-skew-seconds: ${JWT_CLOCK_SKEW_SECONDS}
 
 management:
   endpoints:

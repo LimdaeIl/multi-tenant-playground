@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
 public enum AuthErrorCode implements ErrorCode {
     USER_NOT_FOUND_BY_ID(HttpStatus.NOT_FOUND, "회원: 회원을 찾을 수 없습니다. 회원 ID: %s"),
     USER_NOT_FOUND_BY_EMAIL(HttpStatus.NOT_FOUND, "인증/인가: 가입된 회원이 아닙니다. 이메일: %s"),
-    USER_PASSWORD_INCORRECT(HttpStatus.FORBIDDEN, "인증/인가: 비밀번호가 틀렸습니다."),
+    USER_PASSWORD_INCORRECT(HttpStatus.UNAUTHORIZED, "인증/인가: 비밀번호가 틀렸습니다."),
 
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "인증/인가: 현재 이메일과 동일합니다."),
     EMAIL_EXISTS(HttpStatus.CONFLICT, "인증/인가: 이미 존재하는 이메일입니다."),
@@ -32,11 +32,7 @@ public enum AuthErrorCode implements ErrorCode {
     TENANT_MEMBERSHIP_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 테넌트에 가입된 사용자입니다. userId: %s, tenantCode: %s"),
     TENANT_PRIMARY_NOT_FOUND(HttpStatus.NOT_FOUND, "기본 테넌트를 찾을 수 없습니다."),
     TENANT_MEMBERSHIP_NOT_FOUND(HttpStatus.NOT_FOUND, "테넌트 멤버십을 찾을 수 없습니다. tenantCode: %s"),
-    TENANT_MEMBERSHIP_INACTIVE(HttpStatus.BAD_REQUEST, "활성 상태의 테넌트 멤버십이 아닙니다. tenantCode: %s")
-
-
-    ;
-
+    TENANT_MEMBERSHIP_INACTIVE(HttpStatus.BAD_REQUEST, "활성 상태의 테넌트 멤버십이 아닙니다. tenantCode: %s");
 
     private final HttpStatus status;
     private final String message;

@@ -51,11 +51,23 @@ public class User extends BaseEntity {
     private Long primaryTenantId;
 
     private User(String email, String password, String nickname, String phone) {
-        this.email = email;
+        this.email = normalizeEmail(email);
         this.password = password;
-        this.nickname = nickname;
-        this.phone = phone;
+        this.nickname = normalizeNickname(nickname);
+        this.phone = normalizePhone(phone);
         this.role = UserRole.USER;
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    private static String normalizeNickname(String nickname) {
+        return nickname == null ? null : nickname.trim();
+    }
+
+    private static String normalizePhone(String phone) {
+        return phone == null ? null : phone.replaceAll("\\D", "");
     }
 
     public static User create(String email, String password, String nickname, String phone) {
